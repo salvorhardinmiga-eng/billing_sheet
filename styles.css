@@ -400,10 +400,12 @@ input[readonly] {
   display: flex;
   justify-content: flex-end;
   align-items: center;
+  gap: 0.85rem;
   margin-top: 0.9rem;
   padding-top: 0.8rem;
   border-top: 1px dashed rgba(71, 61, 48, 0.2);
   font-size: 1rem;
+  flex-wrap: wrap;
 }
 
 .total-input-wrap {

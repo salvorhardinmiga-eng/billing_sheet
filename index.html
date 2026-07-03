@@ -59,7 +59,7 @@
         </div>
 
         <p class="help-copy">
-          Amount is auto-calculated by product type and can still be changed manually. Weight-based products can still have pieces entered, and GT is calculated automatically.
+          Amount is auto-calculated by product type and can still be changed manually. Weight-based products can still have pieces entered, and GT is calculated automatically after adding pending amount.
         </p>
 
         <section class="product-library">
@@ -149,6 +149,10 @@
       </div>
 
       <div class="total-strip">
+        <label class="total-input-wrap">
+          <span>Pending amount</span>
+          <input data-field="pendingAmount" type="text" inputmode="decimal">
+        </label>
         <label class="total-input-wrap">
           <span>GT</span>
           <input data-grand-total type="text" inputmode="decimal" readonly>

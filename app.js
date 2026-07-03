@@ -144,6 +144,7 @@ function normalizeSlip(rawSlip = {}) {
   return {
     ...slip,
     ...rawSlip,
+    pendingAmount: rawSlip.pendingAmount || "",
     rows: Array.from({ length: DEFAULT_ROWS }, (_, index) => {
       const rawRow = rawSlip.rows?.[index] || {};
       return {
@@ -171,6 +172,7 @@ function createSlip() {
     date: "",
     dcNumber: "",
     gaddiNumber: "",
+    pendingAmount: "",
     rows: Array.from({ length: DEFAULT_ROWS }, () => ({
       product: "",
       bundle: "",
@@ -371,6 +373,7 @@ function renderEditors() {
     const title = fragment.querySelector("h3");
     const removeButton = fragment.querySelector(".remove-button");
     const rowContainer = fragment.querySelector(".editor-rows");
+    const pendingAmountInput = fragment.querySelector('[data-field="pendingAmount"]');
     const grandTotalInput = fragment.querySelector("[data-grand-total]");
 
     fragment.querySelector(".slip-index").textContent = `Sheet ${slipIndex + 1}`;
@@ -382,6 +385,9 @@ function renderEditors() {
     bindMetaField(fragment, slip, "date");
     bindMetaField(fragment, slip, "dcNumber");
     bindMetaField(fragment, slip, "gaddiNumber");
+    bindMetaField(fragment, slip, "pendingAmount", () => {
+      updateGrandTotalInput(slip, grandTotalInput);
+    });
 
     slip.rows.forEach((row, rowIndex) => {
       const rowFragment = elements.editorRowTemplate.content.cloneNode(true);
@@ -403,6 +409,7 @@ function renderEditors() {
       rowContainer.appendChild(rowFragment);
     });
 
+    pendingAmountInput.value = slip.pendingAmount || "";
     updateGrandTotalInput(slip, grandTotalInput);
 
     removeButton.addEventListener("click", () => {
@@ -588,7 +595,8 @@ function buildSlipPreview(slip) {
   footer.className = "bill-footer";
   footer.innerHTML = `
     <div class="bill-footer-cell">
-      <strong>GT</strong> ${escapeHtml(getGrandTotalDisplay(slip) || " ")}
+      <div><strong>PENDING AMOUNT</strong> ${escapeHtml(slip.pendingAmount || " ")}</div>
+      <div><strong>GT</strong> ${escapeHtml(getGrandTotalDisplay(slip) || " ")}</div>
       <div><strong>GADDI NUMBER</strong> ${escapeHtml(slip.gaddiNumber || " ")}</div>
     </div>
     <div class="bill-footer-cell signature">${escapeHtml(state.settings.signatureLabel || " ")}</div>
@@ -603,13 +611,16 @@ function updateGrandTotalInput(slip, input) {
 }
 
 function getGrandTotalDisplay(slip) {
-  const total = slip.rows.reduce((sum, row) => {
+  const rowTotal = slip.rows.reduce((sum, row) => {
     const amount = toNumber(getRowAmountDisplay(row));
     return Number.isFinite(amount) ? sum + amount : sum;
   }, 0);
+  const pendingAmount = toNumber(slip.pendingAmount);
+  const total = rowTotal + (Number.isFinite(pendingAmount) ? pendingAmount : 0);
+  const hasPendingAmount = String(slip.pendingAmount || "").trim() !== "";
 
   if (!Number.isFinite(total) || total === 0) {
-    const hasAnyAmount = slip.rows.some((row) => getRowAmountDisplay(row));
+    const hasAnyAmount = slip.rows.some((row) => getRowAmountDisplay(row)) || hasPendingAmount;
     return hasAnyAmount ? "0" : "";
   }
 
