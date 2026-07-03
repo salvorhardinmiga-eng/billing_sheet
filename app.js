@@ -303,14 +303,9 @@ function parseProductList(text) {
         return normalizeProductName(category);
       }
 
-      const normalizedCategory = normalizeProductName(category);
+      const normalizedCategory = normalizeCategoryName(category);
       const normalizedItem = normalizeProductName(itemName);
-
-      if (normalizedItem.startsWith(`${normalizedCategory} `) || normalizedItem === normalizedCategory) {
-        return normalizedItem;
-      }
-
-      return normalizeProductName(`${normalizedCategory} ${normalizedItem}`);
+      return combineCategoryAndItem(normalizedCategory, normalizedItem);
     })
     .filter(Boolean));
 }
@@ -679,6 +674,40 @@ function mergeProducts(existingProducts, newProducts) {
   });
 
   return merged;
+}
+
+function normalizeCategoryName(value) {
+  return normalizeProductName(value);
+}
+
+function combineCategoryAndItem(category, item) {
+  if (!category) {
+    return item;
+  }
+
+  if (!item) {
+    return category;
+  }
+
+  if (item === category || item.startsWith(`${category} `)) {
+    return item;
+  }
+
+  // TY/TB/TW/TG items already describe the Tadpatri family clearly.
+  if (category === "TADPATRI" && (/^T[BYWG]\b/.test(item) || item.includes("TADPATRI"))) {
+    return item;
+  }
+
+  // Avoid repeating obvious family names when the item already carries them.
+  if (category === "PANNI" && item.startsWith("PANNI ")) {
+    return item;
+  }
+
+  if (category === "KOREA" && item.startsWith("KOREA ")) {
+    return item;
+  }
+
+  return normalizeProductName(`${category} ${item}`);
 }
 
 function normalizeProductName(value) {
