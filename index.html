@@ -32,7 +32,7 @@
             <p class="panel-kicker">Shop Setup</p>
             <h2>Bill details</h2>
           </div>
-          <button id="reset-data" class="text-button" type="button">Clear all data</button>
+          <button id="reset-data" class="text-button" type="button">Clear bills</button>
         </div>
 
         <div class="settings-grid">
@@ -61,6 +61,28 @@
         <p class="help-copy">
           Fill all values manually. Nothing is auto-calculated.
         </p>
+
+        <section class="product-library">
+          <div class="product-library-header">
+            <div>
+              <p class="panel-kicker">Product Library</p>
+              <h3>Search and save products</h3>
+            </div>
+            <p id="product-count" class="product-count"></p>
+          </div>
+
+          <div class="product-library-form">
+            <label class="product-library-input">
+              <span>Add product to list</span>
+              <input id="new-product-name" type="text" placeholder="Type full product name once">
+            </label>
+            <button id="add-product" class="primary-button compact-button" type="button">Add product</button>
+          </div>
+
+          <p class="product-library-help">
+            Start typing in any product field to filter the list. TB means Tadpatri Black and TY means Tadpatri Yellow.
+          </p>
+        </section>
 
         <div id="slip-editors" class="slip-editors"></div>
       </section>
@@ -114,9 +136,7 @@
           <thead>
             <tr>
               <th>SR</th>
-              <th>Color / Item</th>
-              <th>GSM</th>
-              <th>Size</th>
+              <th>Product</th>
               <th>Bundle</th>
               <th>PCS</th>
               <th>Weight</th>
@@ -140,9 +160,7 @@
   <template id="editor-row-template">
     <tr>
       <td class="row-number"></td>
-      <td><input data-row-field="color" type="text"></td>
-      <td><input data-row-field="gsm" type="text"></td>
-      <td><input data-row-field="size" type="text"></td>
+      <td><input data-row-field="product" type="text" list="product-options" autocomplete="off"></td>
       <td><input data-row-field="bundle" type="text"></td>
       <td><input data-row-field="pcs" type="text"></td>
       <td><input data-row-field="weight" type="text" inputmode="decimal"></td>
@@ -150,6 +168,8 @@
       <td><input data-row-field="amount" type="text" inputmode="decimal"></td>
     </tr>
   </template>
+
+  <datalist id="product-options"></datalist>
 
   <script src="app.js"></script>
 </body>

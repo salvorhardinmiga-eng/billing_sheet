@@ -1,5 +1,110 @@
-const STORAGE_KEY = "billing-sheet-state-v2";
+const STORAGE_KEY = "billing-sheet-state-v4";
 const DEFAULT_ROWS = 7;
+const DEFAULT_PRODUCTS = [
+  "TY TADPATRI YELLOW 170 GSM RAJ GOLD 12x15",
+  "TY TADPATRI YELLOW 170 GSM RAJ GOLD 12x18",
+  "TY TADPATRI YELLOW 170 GSM RAJ GOLD 15x18",
+  "TY TADPATRI YELLOW 170 GSM RAJ GOLD 15x30",
+  "TY TADPATRI YELLOW 170 GSM RAJ GOLD 18x24",
+  "TY TADPATRI YELLOW 170 GSM RAJ GOLD 18x30",
+  "TY TADPATRI YELLOW 170 GSM RAJ GOLD 24x30",
+  "TY TADPATRI YELLOW 170 GSM RAJ GOLD 30x30",
+  "TY TADPATRI YELLOW 120 GSM RAJ GOLD 12x9",
+  "TY TADPATRI YELLOW 120 GSM RAJ GOLD 12x15",
+  "TY TADPATRI YELLOW 120 GSM RAJ GOLD 12x18",
+  "TY TADPATRI YELLOW 120 GSM RAJ GOLD 15x18",
+  "TY TADPATRI YELLOW 120 GSM RAJ GOLD 15x24",
+  "TY TADPATRI YELLOW 120 GSM RAJ GOLD 15x30",
+  "TY TADPATRI YELLOW 120 GSM RAJ GOLD 18x24",
+  "TY TADPATRI YELLOW 120 GSM RAJ GOLD 18x30",
+  "TY TADPATRI YELLOW 120 GSM RAJ GOLD 21x30",
+  "TY TADPATRI YELLOW 120 GSM RAJ GOLD 24x30",
+  "TY TADPATRI YELLOW 120 GSM RAJ GOLD 30x30",
+  "TY TADPATRI YELLOW 120 GSM RAJ GOLD 30x40",
+  "TY TADPATRI YELLOW 120 GSM RAJ GOLD 30x50",
+  "TY TADPATRI YELLOW 120 GSM RAJ GOLD 40x40",
+  "TY TADPATRI YELLOW 120 GSM RAJ GOLD 60x60",
+  "TW 120 GSM RAJ GOLD 24x18",
+  "TW 120 GSM RAJ GOLD 12x15",
+  "TW 120 GSM RAJ GOLD 12x18",
+  "TW 120 GSM RAJ GOLD 15x18",
+  "TW 120 GSM RAJ GOLD 18x30",
+  "TW 120 GSM RAJ GOLD 30x24",
+  "TW 120 GSM RAJ GOLD 30x40",
+  "TB TADPATRI BLACK 170 GSM 24 CARAT 9x12",
+  "TB TADPATRI BLACK 170 GSM 24 CARAT 12x15",
+  "TB TADPATRI BLACK 170 GSM 24 CARAT 12x18",
+  "TB TADPATRI BLACK 170 GSM 24 CARAT 15x18",
+  "TB TADPATRI BLACK 170 GSM 24 CARAT 15x24",
+  "TB TADPATRI BLACK 170 GSM 24 CARAT 15x30",
+  "TB TADPATRI BLACK 170 GSM 24 CARAT 18x24",
+  "TB TADPATRI BLACK 170 GSM 24 CARAT 18x30",
+  "TB TADPATRI BLACK 170 GSM 24 CARAT 30x21",
+  "TB TADPATRI BLACK 170 GSM 24 CARAT 30x24",
+  "TB TADPATRI BLACK 170 GSM 24 CARAT 30x30",
+  "TB TADPATRI BLACK 170 GSM 24 CARAT 30x40",
+  "TB TADPATRI BLACK 170 GSM 24 CARAT 30x50",
+  "TG 200 GSM RAJ GOLD 18x24",
+  "TG 200 GSM RAJ GOLD 30x18",
+  "TG 200 GSM RAJ GOLD 30x24",
+  "TG 200 GSM RAJ GOLD 30x40",
+  "TG 200 GSM RAJ GOLD 36x18",
+  "TG 200 GSM RAJ GOLD 36x24",
+  "PANNI 12FT",
+  "PANNI 14FT",
+  "PANNI 15FT",
+  "PANNI 20FT",
+  "PANNI 24FT",
+  "9x15",
+  "10x16",
+  "11x16",
+  "11x15",
+  "11x20",
+  "12x15",
+  "12x20",
+  "12x24",
+  "12x30",
+  "12x40",
+  "15x18",
+  "15x24",
+  "18x24",
+  "18x25",
+  "18x30",
+  "20x30",
+  "20x32",
+  "RAJ GOLD 12x3",
+  "RAJ GOLD 12x4",
+  "RAJ GOLD 15x2.5",
+  "RAJ GOLD 18x2",
+  "RAJ GOLD 24x1.5",
+  "KALASH 12x4.5",
+  "KALASH 18x3",
+  "KALASH 18x3 BLUE",
+  "KALASH 12x4.5 BLUE",
+  "KOREA 12FT",
+  "KOREA 15FT",
+  "KOREA 16FT",
+  "KOREA 18FT",
+  "KOREA 20FT",
+  "KOREA 24FT",
+  "VEER BLACK",
+  "KOREA 30FT",
+  "TB TADPATRI BLACK 200 GSM RAJ GOLD 24x18",
+  "TB TADPATRI BLACK 200 GSM RAJ GOLD 30x24",
+  "TB TADPATRI BLACK 200 GSM RAJ GOLD 30x40",
+  "TB TADPATRI BLACK 200 GSM RAJ GOLD 30x36",
+  "TB TADPATRI BLACK 200 GSM RAJ GOLD 36x24",
+  "TY TADPATRI YELLOW 170 GSM RAJ GOLD 12x9",
+  "LD 12X2",
+  "LD 12X3",
+  "LD 12X5",
+  "LD 18X0.75",
+  "LD 18X1",
+  "LD 18X2",
+  "LD 18X3",
+  "LD 24X1",
+  "LD 24X0.75",
+];
 
 const state = loadState();
 
@@ -9,6 +114,10 @@ const elements = {
   togglePreview: document.querySelector("#toggle-preview"),
   printSheet: document.querySelector("#print-sheet"),
   resetData: document.querySelector("#reset-data"),
+  addProduct: document.querySelector("#add-product"),
+  newProductName: document.querySelector("#new-product-name"),
+  productCount: document.querySelector("#product-count"),
+  productOptions: document.querySelector("#product-options"),
   shopLabel: document.querySelector("#shop-label"),
   brandLabel: document.querySelector("#brand-label"),
   signatureLabel: document.querySelector("#signature-label"),
@@ -21,7 +130,7 @@ const elements = {
 };
 
 document.body.classList.add("preview-hidden");
-
+refreshProductCatalog();
 wireTopLevelEvents();
 render();
 
@@ -33,13 +142,14 @@ function loadState() {
       signatureLabel: "JAYESH",
       slipsPerPage: 4,
     },
+    customProducts: [],
     slips: [createSlip()],
   };
 
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
     if (!saved) {
-      return defaults;
+      return { ...defaults, productCatalog: [] };
     }
 
     return {
@@ -47,12 +157,16 @@ function loadState() {
         ...defaults.settings,
         ...saved.settings,
       },
+      customProducts: Array.isArray(saved.customProducts)
+        ? saved.customProducts.map(normalizeProductName).filter(Boolean)
+        : [],
       slips: Array.isArray(saved.slips) && saved.slips.length
         ? saved.slips.map(normalizeSlip)
         : defaults.slips,
+      productCatalog: [],
     };
   } catch {
-    return defaults;
+    return { ...defaults, productCatalog: [] };
   }
 }
 
@@ -62,12 +176,23 @@ function normalizeSlip(rawSlip = {}) {
     ...slip,
     ...rawSlip,
     total: rawSlip.total || "",
-    rows: Array.from({ length: DEFAULT_ROWS }, (_, index) => ({
-      ...slip.rows[index],
-      ...(rawSlip.rows?.[index] || {}),
-      bundle: rawSlip.rows?.[index]?.bundle || rawSlip.rows?.[index]?.bundi || "",
-    })),
+    rows: Array.from({ length: DEFAULT_ROWS }, (_, index) => {
+      const rawRow = rawSlip.rows?.[index] || {};
+      return {
+        ...slip.rows[index],
+        ...rawRow,
+        product: rawRow.product || buildLegacyProduct(rawRow),
+        bundle: rawRow.bundle || rawRow.bundi || "",
+      };
+    }),
   };
+}
+
+function buildLegacyProduct(row = {}) {
+  const legacyParts = [row.color, row.gsm, row.size]
+    .map((value) => String(value || "").trim())
+    .filter(Boolean);
+  return legacyParts.length ? normalizeProductName(legacyParts.join(" ")) : "";
 }
 
 function createSlip() {
@@ -79,9 +204,7 @@ function createSlip() {
     gaddiNumber: "",
     total: "",
     rows: Array.from({ length: DEFAULT_ROWS }, () => ({
-      color: "",
-      gsm: "",
-      size: "",
+      product: "",
       bundle: "",
       pcs: "",
       weight: "",
@@ -99,13 +222,11 @@ function wireTopLevelEvents() {
 
   elements.duplicateSlip.addEventListener("click", () => {
     const lastSlip = state.slips[state.slips.length - 1];
-    if (!lastSlip) {
-      state.slips.push(createSlip());
-    } else {
-      const duplicate = normalizeSlip(JSON.parse(JSON.stringify(lastSlip)));
-      duplicate.id = createSlip().id;
-      state.slips.push(duplicate);
-    }
+    const duplicate = lastSlip
+      ? normalizeSlip(JSON.parse(JSON.stringify(lastSlip)))
+      : createSlip();
+    duplicate.id = createSlip().id;
+    state.slips.push(duplicate);
     commit();
   });
 
@@ -119,19 +240,21 @@ function wireTopLevelEvents() {
   });
 
   elements.resetData.addEventListener("click", () => {
-    const confirmed = window.confirm("Clear all bills and start fresh?");
+    const confirmed = window.confirm("Clear the current bills? Saved products will stay.");
     if (!confirmed) {
       return;
     }
 
-    state.settings = {
-      shopLabel: "ताडपत्री",
-      brandLabel: "||| SHREE |||",
-      signatureLabel: "JAYESH",
-      slipsPerPage: 4,
-    };
     state.slips = [createSlip()];
     commit();
+  });
+
+  elements.addProduct.addEventListener("click", addProductFromManager);
+  elements.newProductName.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      addProductFromManager();
+    }
   });
 
   elements.shopLabel.addEventListener("input", (event) => {
@@ -155,14 +278,47 @@ function wireTopLevelEvents() {
   });
 }
 
-function commit({ fullRender = true } = {}) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+function addProductFromManager() {
+  const productName = normalizeProductName(elements.newProductName.value);
+  if (!productName) {
+    return;
+  }
+
+  state.customProducts = mergeProducts(state.customProducts, [productName]);
+  elements.newProductName.value = "";
+  commit({ fullRender: false, refreshProducts: true });
+  elements.newProductName.focus();
+}
+
+function refreshProductCatalog() {
+  state.productCatalog = mergeProducts(DEFAULT_PRODUCTS, state.customProducts);
+}
+
+function commit({ fullRender = true, refreshProducts = false } = {}) {
+  if (refreshProducts) {
+    refreshProductCatalog();
+  }
+
+  persistState();
+
   if (fullRender) {
     render();
     return;
   }
 
+  if (refreshProducts) {
+    renderProductCatalog();
+  }
+
   renderPreview();
+}
+
+function persistState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({
+    settings: state.settings,
+    customProducts: state.customProducts,
+    slips: state.slips,
+  }));
 }
 
 function render() {
@@ -171,9 +327,23 @@ function render() {
   elements.signatureLabel.value = state.settings.signatureLabel;
   elements.slipsPerPage.value = String(state.settings.slipsPerPage);
 
+  renderProductCatalog();
   renderEditors();
   renderPreview();
   syncPreviewToggleLabel();
+}
+
+function renderProductCatalog() {
+  elements.productCount.textContent = `${state.productCatalog.length} products ready`;
+  elements.productOptions.innerHTML = "";
+
+  const fragment = document.createDocumentFragment();
+  state.productCatalog.forEach((product) => {
+    const option = document.createElement("option");
+    option.value = product;
+    fragment.appendChild(option);
+  });
+  elements.productOptions.appendChild(fragment);
 }
 
 function renderEditors() {
@@ -188,7 +358,7 @@ function renderEditors() {
     const rowContainer = fragment.querySelector(".editor-rows");
 
     indexLabel.textContent = `Sheet ${slipIndex + 1}`;
-    title.textContent = `${slip.customerName || "Untitled bill"}`;
+    title.textContent = slip.customerName || "Untitled bill";
 
     bindMetaField(fragment, slip, "customerName", () => {
       title.textContent = slip.customerName || "Untitled bill";
@@ -206,6 +376,13 @@ function renderEditors() {
       rowElement.querySelectorAll("[data-row-field]").forEach((input) => {
         const field = input.dataset.rowField;
         input.value = row[field] || "";
+        input.addEventListener("change", (event) => {
+          row[field] = field === "product"
+            ? normalizeProductName(event.target.value)
+            : event.target.value;
+          event.target.value = row[field];
+          commit({ fullRender: false });
+        });
         input.addEventListener("input", (event) => {
           row[field] = event.target.value;
           commit({ fullRender: false });
@@ -254,13 +431,11 @@ function renderPreview() {
   pages.forEach((pageSlips, pageIndex) => {
     const page = document.createElement("section");
     page.className = `a4-page density-${slipsPerPage}`;
-    if (pageSlips.length === 1) {
-      page.classList.add("single-slip-page");
-    }
     page.setAttribute("aria-label", `Print page ${pageIndex + 1}`);
 
     const pageGrid = document.createElement("div");
     pageGrid.className = "page-grid";
+
     if (pageSlips.length === 1) {
       pageGrid.classList.add("single-slip-grid");
     }
@@ -313,15 +488,13 @@ function buildSlipPreview(slip) {
   table.innerHTML = `
     <thead>
       <tr>
-        <th style="width: 5%;">SR</th>
-        <th class="text-left" style="width: 18%;">COLOR</th>
-        <th style="width: 8%;">GSM</th>
-        <th style="width: 12%;">SIZE</th>
-        <th style="width: 8%;">BUNDLE</th>
-        <th style="width: 8%;">PCS</th>
-        <th style="width: 16%;">WEIGHT</th>
-        <th style="width: 12%;">RATE</th>
-        <th style="width: 13%;">AMOUNT</th>
+        <th style="width: 6%;">SR</th>
+        <th class="text-left" style="width: 40%;">PRODUCT</th>
+        <th style="width: 10%;">BUNDLE</th>
+        <th style="width: 9%;">PCS</th>
+        <th style="width: 13%;">WEIGHT</th>
+        <th style="width: 10%;">RATE</th>
+        <th style="width: 12%;">AMOUNT</th>
       </tr>
     </thead>
     <tbody></tbody>
@@ -332,14 +505,12 @@ function buildSlipPreview(slip) {
     const rowElement = document.createElement("tr");
     rowElement.innerHTML = `
       <td>${index + 1}</td>
-      <td class="text-left">${escapeHtml(row.color || " ")}</td>
-      <td>${escapeHtml(row.gsm || " ")}</td>
-      <td>${escapeHtml(row.size || " ")}</td>
+      <td class="text-left">${escapeHtml(row.product || " ")}</td>
       <td>${escapeHtml(row.bundle || " ")}</td>
       <td>${escapeHtml(row.pcs || " ")}</td>
       <td>${escapeHtml(row.weight || " ")}</td>
       <td>${escapeHtml(row.rate || " ")}</td>
-      <td>${escapeHtml(getDisplayAmount(row) || " ")}</td>
+      <td>${escapeHtml(row.amount || " ")}</td>
     `;
     body.appendChild(rowElement);
   });
@@ -357,8 +528,40 @@ function buildSlipPreview(slip) {
   article.append(titleRow, meta, table, footer);
   return article;
 }
-function getDisplayAmount(row) {
-  return row.amount && row.amount.trim() ? row.amount.trim() : "";
+
+function mergeProducts(existingProducts, newProducts) {
+  const seen = new Set();
+  const merged = [];
+
+  [...existingProducts, ...newProducts].forEach((product) => {
+    const normalized = normalizeProductName(product);
+    if (!normalized || seen.has(normalized)) {
+      return;
+    }
+
+    seen.add(normalized);
+    merged.push(normalized);
+  });
+
+  return merged;
+}
+
+function normalizeProductName(value) {
+  if (value === null || value === undefined) {
+    return "";
+  }
+
+  let normalized = String(value)
+    .replace(/[•×]/g, "x")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toUpperCase();
+
+  normalized = normalized.replace(/^([A-Z]{2})(\d)/, "$1 $2");
+  normalized = normalized.replace(/^TB(?:\s+TADPATRI BLACK)?\b/, "TB TADPATRI BLACK");
+  normalized = normalized.replace(/^TY(?:\s+TADPATRI YELLOW)?\b/, "TY TADPATRI YELLOW");
+
+  return normalized;
 }
 
 function chunk(items, size) {

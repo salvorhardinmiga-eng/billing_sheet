@@ -113,6 +113,10 @@ select {
   font-weight: 600;
 }
 
+.compact-button {
+  padding: 0.72rem 1rem;
+}
+
 .primary-button {
   background: var(--line-strong);
   color: #fff;
@@ -227,6 +231,51 @@ select:focus {
   line-height: 1.45;
 }
 
+.product-library {
+  margin-bottom: 1.15rem;
+  padding: 1rem;
+  border: 1px solid rgba(71, 61, 48, 0.12);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.66);
+}
+
+.product-library-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-end;
+  margin-bottom: 0.85rem;
+}
+
+.product-library-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.product-count {
+  margin: 0;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.product-library-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.8rem;
+  align-items: end;
+}
+
+.product-library-input {
+  min-width: 0;
+}
+
+.product-library-help {
+  margin: 0.8rem 0 0;
+  color: var(--muted);
+  font-size: 0.94rem;
+  line-height: 1.4;
+}
+
 .slip-editors {
   display: grid;
   gap: 1rem;
@@ -288,7 +337,7 @@ select:focus {
 
 .editor-table {
   width: 100%;
-  min-width: 980px;
+  min-width: 760px;
   border-collapse: collapse;
   table-layout: fixed;
 }
@@ -323,6 +372,10 @@ select:focus {
   border-radius: 8px;
   background: transparent;
   text-align: center;
+}
+
+.editor-table td:nth-child(2) input {
+  text-align: left;
 }
 
 .editor-table td:first-child {
@@ -567,6 +620,10 @@ select:focus {
 
   .settings-grid,
   .meta-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .product-library-form {
     grid-template-columns: 1fr;
   }
 
