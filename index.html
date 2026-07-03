@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Billing Sheet Printer</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">Printable Shop Billing Sheet</p>
+        <h1>Clean bills on screen, ready for A4 print</h1>
+        <p class="hero-copy">
+          Fill the bill on the computer, preview how it will look on paper, then print
+          3, 4, or 5 slips on one A4 page.
+        </p>
+      </div>
+      <div class="hero-actions">
+        <button id="add-slip" class="primary-button" type="button">New bill</button>
+        <button id="duplicate-slip" class="ghost-button" type="button">Duplicate last bill</button>
+        <button id="toggle-preview" class="ghost-button" type="button">Show preview</button>
+        <button id="print-sheet" class="primary-button accent-button" type="button">Print / Save PDF</button>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <section class="panel settings-panel">
+        <div class="panel-header">
+          <div>
+            <p class="panel-kicker">Shop Setup</p>
+            <h2>Bill details</h2>
+          </div>
+          <button id="reset-data" class="text-button" type="button">Clear all data</button>
+        </div>
+
+        <div class="settings-grid">
+          <label>
+            <span>Top left heading</span>
+            <input id="shop-label" type="text" placeholder="ताडपत्री">
+          </label>
+          <label>
+            <span>Center brand</span>
+            <input id="brand-label" type="text" placeholder="||| SHREE |||">
+          </label>
+          <label>
+            <span>Footer name</span>
+            <input id="signature-label" type="text" placeholder="JAYESH">
+          </label>
+          <label>
+            <span>Slips per A4 page</span>
+            <select id="slips-per-page">
+              <option value="3">3 per page</option>
+              <option value="4">4 per page</option>
+              <option value="5">5 per page</option>
+            </select>
+          </label>
+        </div>
+
+        <p class="help-copy">
+          Fill all values manually. Nothing is auto-calculated.
+        </p>
+
+        <div id="slip-editors" class="slip-editors"></div>
+      </section>
+
+      <section class="panel preview-panel">
+        <div class="panel-header preview-header">
+          <div>
+            <p class="panel-kicker">A4 Preview</p>
+            <h2>Print layout</h2>
+          </div>
+          <p id="preview-summary" class="preview-summary"></p>
+        </div>
+
+        <div id="preview-pages" class="preview-pages"></div>
+      </section>
+    </main>
+  </div>
+
+  <template id="slip-editor-template">
+    <article class="slip-editor-card">
+      <div class="slip-editor-top">
+        <div>
+          <p class="slip-index"></p>
+          <h3>Bill</h3>
+        </div>
+        <button class="remove-button" type="button">Remove</button>
+      </div>
+
+      <div class="meta-grid">
+        <label>
+          <span>Customer name</span>
+          <input data-field="customerName" type="text">
+        </label>
+        <label>
+          <span>Date</span>
+          <input data-field="date" type="text">
+        </label>
+        <label>
+          <span>DC number</span>
+          <input data-field="dcNumber" type="text">
+        </label>
+        <label>
+          <span>Gaddi number</span>
+          <input data-field="gaddiNumber" type="text">
+        </label>
+      </div>
+
+      <div class="rows-table-wrapper">
+        <div class="table-scroll-hint">Swipe or scroll sideways to fill all columns.</div>
+        <table class="editor-table">
+          <thead>
+            <tr>
+              <th>SR</th>
+              <th>Color / Item</th>
+              <th>GSM</th>
+              <th>Size</th>
+              <th>Bundle</th>
+              <th>PCS</th>
+              <th>Weight</th>
+              <th>Rate</th>
+              <th>Amount</th>
+            </tr>
+          </thead>
+          <tbody class="editor-rows"></tbody>
+        </table>
+      </div>
+
+      <div class="total-strip">
+        <label class="total-input-wrap">
+          <span>Total</span>
+          <input data-field="total" type="text" inputmode="decimal">
+        </label>
+      </div>
+    </article>
+  </template>
+
+  <template id="editor-row-template">
+    <tr>
+      <td class="row-number"></td>
+      <td><input data-row-field="color" type="text"></td>
+      <td><input data-row-field="gsm" type="text"></td>
+      <td><input data-row-field="size" type="text"></td>
+      <td><input data-row-field="bundle" type="text"></td>
+      <td><input data-row-field="pcs" type="text"></td>
+      <td><input data-row-field="weight" type="text" inputmode="decimal"></td>
+      <td><input data-row-field="rate" type="text" inputmode="decimal"></td>
+      <td><input data-row-field="amount" type="text" inputmode="decimal"></td>
+    </tr>
+  </template>
+
+  <script src="app.js"></script>
+</body>
+</html>
