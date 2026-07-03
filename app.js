@@ -440,11 +440,11 @@ function syncRowCalculation(row, inputs) {
   const usesWeight = calculationMode === "kg";
 
   inputs.weight.readOnly = !usesWeight;
-  inputs.pcs.readOnly = usesWeight;
+  inputs.pcs.readOnly = false;
   inputs.weight.classList.toggle("inactive-field", !usesWeight);
-  inputs.pcs.classList.toggle("inactive-field", usesWeight);
+  inputs.pcs.classList.remove("inactive-field");
   inputs.weight.placeholder = usesWeight ? "Weight" : "Not used";
-  inputs.pcs.placeholder = usesWeight ? "Not used" : "PCS";
+  inputs.pcs.placeholder = "PCS";
   inputs.amount.placeholder = usesWeight ? "Weight x rate" : "PCS x rate";
 
   if (row.amountMode !== "manual") {
@@ -556,7 +556,7 @@ function buildSlipPreview(slip) {
       <td>${index + 1}</td>
       <td class="text-left">${escapeHtml(row.product || " ")}</td>
       <td>${escapeHtml(row.bundle || " ")}</td>
-      <td>${escapeHtml(mode === "kg" ? " " : row.pcs || " ")}</td>
+      <td>${escapeHtml(row.pcs || " ")}</td>
       <td>${escapeHtml(mode === "kg" ? row.weight || " " : " ")}</td>
       <td>${escapeHtml(row.rate || " ")}</td>
       <td>${escapeHtml(getRowAmountDisplay(row) || " ")}</td>
