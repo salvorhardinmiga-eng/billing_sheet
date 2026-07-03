@@ -14,6 +14,8 @@ Simple printable billing site for the shop.
 ## Notes
 
 - Data is saved in the browser with `localStorage`, so the form stays there when you reopen it on the same computer.
-- All fields, including `amount` and `total`, are entered manually.
+- Products in the Tadpatri, Korea, LD, baler twine, PP sutli, sutli, and takiya groups calculate `amount = weight x rate`.
+- Other products calculate `amount = pcs x rate`.
+- Amount can still be changed manually for any row, and `GT` is calculated automatically from the row amounts.
 - The `Product` column combines the old color, GSM, and size fields into one searchable name.
 - The preview can be shown or hidden while editing, and a single slip is centered on the print page.

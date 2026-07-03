@@ -225,6 +225,11 @@ select:focus {
   border-color: var(--accent);
 }
 
+input[readonly] {
+  background: rgba(245, 239, 228, 0.95);
+  color: var(--line-strong);
+}
+
 .help-copy {
   margin: 1rem 0 1.1rem;
   color: var(--muted);
@@ -372,6 +377,10 @@ select:focus {
   border-radius: 8px;
   background: transparent;
   text-align: center;
+}
+
+.editor-table td input.inactive-field {
+  opacity: 0.45;
 }
 
 .editor-table td:nth-child(2) input {

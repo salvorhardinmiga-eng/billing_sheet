@@ -1,6 +1,6 @@
-const STORAGE_KEY = "billing-sheet-state-v4";
+const STORAGE_KEY = "billing-sheet-state-v5";
 const DEFAULT_ROWS = 7;
-const DEFAULT_PRODUCTS = [
+const FALLBACK_PRODUCTS = [
   "TY TADPATRI YELLOW 170 GSM RAJ GOLD 12x15",
   "TY TADPATRI YELLOW 170 GSM RAJ GOLD 12x18",
   "TY TADPATRI YELLOW 170 GSM RAJ GOLD 15x18",
@@ -55,46 +55,13 @@ const DEFAULT_PRODUCTS = [
   "PANNI 15FT",
   "PANNI 20FT",
   "PANNI 24FT",
-  "9x15",
-  "10x16",
-  "11x16",
-  "11x15",
-  "11x20",
-  "12x15",
-  "12x20",
-  "12x24",
-  "12x30",
-  "12x40",
-  "15x18",
-  "15x24",
-  "18x24",
-  "18x25",
-  "18x30",
-  "20x30",
-  "20x32",
-  "RAJ GOLD 12x3",
-  "RAJ GOLD 12x4",
-  "RAJ GOLD 15x2.5",
-  "RAJ GOLD 18x2",
-  "RAJ GOLD 24x1.5",
-  "KALASH 12x4.5",
-  "KALASH 18x3",
-  "KALASH 18x3 BLUE",
-  "KALASH 12x4.5 BLUE",
   "KOREA 12FT",
   "KOREA 15FT",
   "KOREA 16FT",
   "KOREA 18FT",
   "KOREA 20FT",
   "KOREA 24FT",
-  "VEER BLACK",
   "KOREA 30FT",
-  "TB TADPATRI BLACK 200 GSM RAJ GOLD 24x18",
-  "TB TADPATRI BLACK 200 GSM RAJ GOLD 30x24",
-  "TB TADPATRI BLACK 200 GSM RAJ GOLD 30x40",
-  "TB TADPATRI BLACK 200 GSM RAJ GOLD 30x36",
-  "TB TADPATRI BLACK 200 GSM RAJ GOLD 36x24",
-  "TY TADPATRI YELLOW 170 GSM RAJ GOLD 12x9",
   "LD 12X2",
   "LD 12X3",
   "LD 12X5",
@@ -133,6 +100,7 @@ document.body.classList.add("preview-hidden");
 refreshProductCatalog();
 wireTopLevelEvents();
 render();
+loadProductsFromNoteFile();
 
 function loadState() {
   const defaults = {
@@ -144,12 +112,13 @@ function loadState() {
     },
     customProducts: [],
     slips: [createSlip()],
+    productCatalog: [],
   };
 
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
     if (!saved) {
-      return { ...defaults, productCatalog: [] };
+      return defaults;
     }
 
     return {
@@ -166,7 +135,7 @@ function loadState() {
       productCatalog: [],
     };
   } catch {
-    return { ...defaults, productCatalog: [] };
+    return defaults;
   }
 }
 
@@ -175,7 +144,6 @@ function normalizeSlip(rawSlip = {}) {
   return {
     ...slip,
     ...rawSlip,
-    total: rawSlip.total || "",
     rows: Array.from({ length: DEFAULT_ROWS }, (_, index) => {
       const rawRow = rawSlip.rows?.[index] || {};
       return {
@@ -183,6 +151,7 @@ function normalizeSlip(rawSlip = {}) {
         ...rawRow,
         product: rawRow.product || buildLegacyProduct(rawRow),
         bundle: rawRow.bundle || rawRow.bundi || "",
+        amountMode: rawRow.amountMode || (rawRow.amount ? "manual" : "auto"),
       };
     }),
   };
@@ -202,7 +171,6 @@ function createSlip() {
     date: "",
     dcNumber: "",
     gaddiNumber: "",
-    total: "",
     rows: Array.from({ length: DEFAULT_ROWS }, () => ({
       product: "",
       bundle: "",
@@ -210,6 +178,7 @@ function createSlip() {
       weight: "",
       rate: "",
       amount: "",
+      amountMode: "auto",
     })),
   };
 }
@@ -290,13 +259,40 @@ function addProductFromManager() {
   elements.newProductName.focus();
 }
 
-function refreshProductCatalog() {
-  state.productCatalog = mergeProducts(DEFAULT_PRODUCTS, state.customProducts);
+function refreshProductCatalog(noteProducts = []) {
+  state.productCatalog = mergeProducts(noteProducts.length ? noteProducts : FALLBACK_PRODUCTS, state.customProducts);
+}
+
+async function loadProductsFromNoteFile() {
+  try {
+    const response = await fetch("note.txt", { cache: "no-store" });
+    if (!response.ok) {
+      return;
+    }
+
+    const noteText = await response.text();
+    const noteProducts = parseProductList(noteText);
+    if (!noteProducts.length) {
+      return;
+    }
+
+    refreshProductCatalog(noteProducts);
+    renderProductCatalog();
+  } catch {
+    // Opening index.html directly from disk may block fetch; fallback list stays usable.
+  }
+}
+
+function parseProductList(text) {
+  return mergeProducts([], text
+    .split(/\r?\n/)
+    .map((line) => normalizeProductName(line))
+    .filter(Boolean));
 }
 
 function commit({ fullRender = true, refreshProducts = false } = {}) {
   if (refreshProducts) {
-    refreshProductCatalog();
+    refreshProductCatalog(state.productCatalog);
   }
 
   persistState();
@@ -343,6 +339,7 @@ function renderProductCatalog() {
     option.value = product;
     fragment.appendChild(option);
   });
+
   elements.productOptions.appendChild(fragment);
 }
 
@@ -351,13 +348,12 @@ function renderEditors() {
 
   state.slips.forEach((slip, slipIndex) => {
     const fragment = elements.slipEditorTemplate.content.cloneNode(true);
-    const card = fragment.querySelector(".slip-editor-card");
-    const indexLabel = fragment.querySelector(".slip-index");
     const title = fragment.querySelector("h3");
     const removeButton = fragment.querySelector(".remove-button");
     const rowContainer = fragment.querySelector(".editor-rows");
+    const grandTotalInput = fragment.querySelector("[data-grand-total]");
 
-    indexLabel.textContent = `Sheet ${slipIndex + 1}`;
+    fragment.querySelector(".slip-index").textContent = `Sheet ${slipIndex + 1}`;
     title.textContent = slip.customerName || "Untitled bill";
 
     bindMetaField(fragment, slip, "customerName", () => {
@@ -366,31 +362,28 @@ function renderEditors() {
     bindMetaField(fragment, slip, "date");
     bindMetaField(fragment, slip, "dcNumber");
     bindMetaField(fragment, slip, "gaddiNumber");
-    bindMetaField(fragment, slip, "total");
 
     slip.rows.forEach((row, rowIndex) => {
       const rowFragment = elements.editorRowTemplate.content.cloneNode(true);
       const rowElement = rowFragment.querySelector("tr");
+      const inputs = getRowInputs(rowElement);
       rowFragment.querySelector(".row-number").textContent = String(rowIndex + 1);
 
-      rowElement.querySelectorAll("[data-row-field]").forEach((input) => {
-        const field = input.dataset.rowField;
+      Object.entries(inputs).forEach(([field, input]) => {
         input.value = row[field] || "";
-        input.addEventListener("change", (event) => {
-          row[field] = field === "product"
-            ? normalizeProductName(event.target.value)
-            : event.target.value;
-          event.target.value = row[field];
-          commit({ fullRender: false });
-        });
         input.addEventListener("input", (event) => {
-          row[field] = event.target.value;
-          commit({ fullRender: false });
+          handleRowInput(row, field, event.target.value, inputs, grandTotalInput, slip);
+        });
+        input.addEventListener("change", (event) => {
+          handleRowChange(row, field, event.target.value, inputs, grandTotalInput, slip);
         });
       });
 
+      syncRowCalculation(row, inputs);
       rowContainer.appendChild(rowFragment);
     });
+
+    updateGrandTotalInput(slip, grandTotalInput);
 
     removeButton.addEventListener("click", () => {
       state.slips = state.slips.filter((item) => item.id !== slip.id);
@@ -400,9 +393,65 @@ function renderEditors() {
       commit();
     });
 
-    card.dataset.slipId = slip.id;
     elements.slipEditors.appendChild(fragment);
   });
+}
+
+function getRowInputs(rowElement) {
+  const inputs = {};
+  rowElement.querySelectorAll("[data-row-field]").forEach((input) => {
+    inputs[input.dataset.rowField] = input;
+  });
+  return inputs;
+}
+
+function handleRowInput(row, field, value, inputs, grandTotalInput, slip) {
+  row[field] = value;
+
+  if (field === "amount") {
+    row.amountMode = value.trim() ? "manual" : "auto";
+  }
+
+  if (field !== "amount") {
+    syncRowCalculation(row, inputs);
+  } else if (row.amountMode === "auto") {
+    syncRowCalculation(row, inputs);
+  }
+
+  updateGrandTotalInput(slip, grandTotalInput);
+  commit({ fullRender: false });
+}
+
+function handleRowChange(row, field, value, inputs, grandTotalInput, slip) {
+  row[field] = field === "product" ? normalizeProductName(value) : value;
+  inputs[field].value = row[field];
+
+  if (field === "amount") {
+    row.amountMode = row.amount.trim() ? "manual" : "auto";
+  }
+
+  syncRowCalculation(row, inputs);
+  updateGrandTotalInput(slip, grandTotalInput);
+  commit({ fullRender: false });
+}
+
+function syncRowCalculation(row, inputs) {
+  const calculationMode = getCalculationMode(row.product);
+  const usesWeight = calculationMode === "kg";
+
+  inputs.weight.readOnly = !usesWeight;
+  inputs.pcs.readOnly = usesWeight;
+  inputs.weight.classList.toggle("inactive-field", !usesWeight);
+  inputs.pcs.classList.toggle("inactive-field", usesWeight);
+  inputs.weight.placeholder = usesWeight ? "Weight" : "Not used";
+  inputs.pcs.placeholder = usesWeight ? "Not used" : "PCS";
+  inputs.amount.placeholder = usesWeight ? "Weight x rate" : "PCS x rate";
+
+  if (row.amountMode !== "manual") {
+    const autoAmount = calculateRowAmount(row);
+    row.amount = autoAmount.display;
+    inputs.amount.value = row.amount;
+  }
 }
 
 function bindMetaField(fragment, slip, fieldName, afterChange) {
@@ -435,7 +484,6 @@ function renderPreview() {
 
     const pageGrid = document.createElement("div");
     pageGrid.className = "page-grid";
-
     if (pageSlips.length === 1) {
       pageGrid.classList.add("single-slip-grid");
     }
@@ -502,15 +550,16 @@ function buildSlipPreview(slip) {
 
   const body = table.querySelector("tbody");
   slip.rows.forEach((row, index) => {
+    const mode = getCalculationMode(row.product);
     const rowElement = document.createElement("tr");
     rowElement.innerHTML = `
       <td>${index + 1}</td>
       <td class="text-left">${escapeHtml(row.product || " ")}</td>
       <td>${escapeHtml(row.bundle || " ")}</td>
-      <td>${escapeHtml(row.pcs || " ")}</td>
-      <td>${escapeHtml(row.weight || " ")}</td>
+      <td>${escapeHtml(mode === "kg" ? " " : row.pcs || " ")}</td>
+      <td>${escapeHtml(mode === "kg" ? row.weight || " " : " ")}</td>
       <td>${escapeHtml(row.rate || " ")}</td>
-      <td>${escapeHtml(row.amount || " ")}</td>
+      <td>${escapeHtml(getRowAmountDisplay(row) || " ")}</td>
     `;
     body.appendChild(rowElement);
   });
@@ -519,7 +568,7 @@ function buildSlipPreview(slip) {
   footer.className = "bill-footer";
   footer.innerHTML = `
     <div class="bill-footer-cell">
-      <strong>TOTAL</strong> ${escapeHtml(slip.total || " ")}
+      <strong>GT</strong> ${escapeHtml(getGrandTotalDisplay(slip) || " ")}
       <div><strong>GADDI NUMBER</strong> ${escapeHtml(slip.gaddiNumber || " ")}</div>
     </div>
     <div class="bill-footer-cell signature">${escapeHtml(state.settings.signatureLabel || " ")}</div>
@@ -527,6 +576,67 @@ function buildSlipPreview(slip) {
 
   article.append(titleRow, meta, table, footer);
   return article;
+}
+
+function updateGrandTotalInput(slip, input) {
+  input.value = getGrandTotalDisplay(slip);
+}
+
+function getGrandTotalDisplay(slip) {
+  const total = slip.rows.reduce((sum, row) => {
+    const amount = toNumber(getRowAmountDisplay(row));
+    return Number.isFinite(amount) ? sum + amount : sum;
+  }, 0);
+
+  if (!Number.isFinite(total) || total === 0) {
+    const hasAnyAmount = slip.rows.some((row) => getRowAmountDisplay(row));
+    return hasAnyAmount ? "0" : "";
+  }
+
+  return formatDisplayNumber(total);
+}
+
+function getRowAmountDisplay(row) {
+  if (row.amount && row.amount.trim()) {
+    return row.amount.trim();
+  }
+
+  return calculateRowAmount(row).display;
+}
+
+function calculateRowAmount(row) {
+  const rate = toNumber(row.rate);
+  const quantityField = getCalculationMode(row.product) === "kg" ? row.weight : row.pcs;
+  const quantity = toNumber(quantityField);
+
+  if (!Number.isFinite(rate) || !Number.isFinite(quantity)) {
+    return { value: Number.NaN, display: "" };
+  }
+
+  const value = rate * quantity;
+  return {
+    value,
+    display: formatDisplayNumber(value),
+  };
+}
+
+function getCalculationMode(productName) {
+  const product = normalizeProductName(productName);
+
+  if (
+    /^T[BYWG]\b/.test(product) ||
+    product.includes("TADPATRI") ||
+    product.includes("KOREA") ||
+    /^LD\b/.test(product) ||
+    product.includes("BALER TWINE") ||
+    product.includes("PP SUTLI") ||
+    product.includes("SUTLI") ||
+    product.includes("TAKIYA")
+  ) {
+    return "kg";
+  }
+
+  return "pcs";
 }
 
 function mergeProducts(existingProducts, newProducts) {
@@ -562,6 +672,28 @@ function normalizeProductName(value) {
   normalized = normalized.replace(/^TY(?:\s+TADPATRI YELLOW)?\b/, "TY TADPATRI YELLOW");
 
   return normalized;
+}
+
+function toNumber(value) {
+  if (value === null || value === undefined) {
+    return Number.NaN;
+  }
+
+  const normalized = String(value).replace(/[^0-9.-]/g, "");
+  return Number.parseFloat(normalized);
+}
+
+function formatDisplayNumber(value) {
+  if (!Number.isFinite(value)) {
+    return "";
+  }
+
+  const rounded = Math.round((value + Number.EPSILON) * 100) / 100;
+  if (Math.abs(rounded - Math.round(rounded)) < 0.00001) {
+    return String(Math.round(rounded));
+  }
+
+  return rounded.toFixed(2).replace(/\.?0+$/, "");
 }
 
 function chunk(items, size) {
