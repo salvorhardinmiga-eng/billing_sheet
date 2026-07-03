@@ -529,7 +529,7 @@ input[readonly] {
 .bill-table td {
   border-right: 1px solid var(--line-strong);
   border-bottom: 1px solid var(--line-strong);
-  padding: 0.8mm 1mm;
+  padding: 1mm 1.2mm;
   text-align: center;
   vertical-align: middle;
 }
@@ -541,11 +541,18 @@ input[readonly] {
 
 .bill-table th {
   font-weight: 700;
+  background: #f4ede1;
+  letter-spacing: 0.04em;
 }
 
 .bill-table td.text-left,
 .bill-table th.text-left {
   text-align: left;
+}
+
+.bill-table td.text-left,
+.bill-table th.text-left {
+  padding-left: 1.8mm;
 }
 
 .bill-footer {
@@ -565,9 +572,37 @@ input[readonly] {
 }
 
 .bill-footer-cell.signature {
-  text-align: center;
+  display: grid;
+  place-items: center;
   font-weight: 700;
   letter-spacing: 0.05em;
+  background: #faf6ef;
+}
+
+.bill-summary-list {
+  display: grid;
+  gap: 0.5mm;
+}
+
+.bill-summary-row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 1.6mm;
+  align-items: baseline;
+}
+
+.bill-summary-row.total-row {
+  padding-top: 0.5mm;
+  margin-top: 0.2mm;
+  border-top: 1px solid rgba(71, 61, 48, 0.22);
+}
+
+.bill-summary-label {
+  font-weight: 700;
+}
+
+.bill-summary-value {
+  text-align: right;
 }
 
 .density-3 .bill-slip {

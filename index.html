@@ -59,7 +59,7 @@
         </div>
 
         <p class="help-copy">
-          Amount is auto-calculated by product type and can still be changed manually. Weight-based products can still have pieces entered, and GT is calculated automatically after adding pending amount.
+          DC number is automatic from GD-001. Amount is auto-calculated by product type but can still be changed manually, and pending amount is added into the grand total automatically.
         </p>
 
         <section class="product-library">
@@ -121,8 +121,8 @@
           <input data-field="date" type="text">
         </label>
         <label>
-          <span>DC number</span>
-          <input data-field="dcNumber" type="text">
+            <span>DC number</span>
+            <input data-field="dcNumber" type="text" readonly>
         </label>
         <label>
           <span>Gaddi number</span>
@@ -154,7 +154,7 @@
           <input data-field="pendingAmount" type="text" inputmode="decimal">
         </label>
         <label class="total-input-wrap">
-          <span>GT</span>
+          <span>Grand total</span>
           <input data-grand-total type="text" inputmode="decimal" readonly>
         </label>
       </div>

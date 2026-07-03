@@ -1,5 +1,6 @@
 const STORAGE_KEY = "billing-sheet-state-v5";
 const DEFAULT_ROWS = 7;
+const DC_PREFIX = "GD-";
 const FALLBACK_PRODUCTS = [
   "TY TADPATRI YELLOW 170 GSM RAJ GOLD 12x15",
   "TY TADPATRI YELLOW 170 GSM RAJ GOLD 12x18",
@@ -111,7 +112,7 @@ function loadState() {
       slipsPerPage: 4,
     },
     customProducts: [],
-    slips: [createSlip()],
+    slips: [createSlip(formatDcNumber(1))],
     productCatalog: [],
   };
 
@@ -121,6 +122,14 @@ function loadState() {
       return defaults;
     }
 
+    const slips = Array.isArray(saved.slips) && saved.slips.length
+      ? saved.slips.map((slip) => normalizeSlip(slip))
+      : defaults.slips;
+
+    slips.forEach((slip, index) => {
+      slip.dcNumber = formatDcNumber(index + 1);
+    });
+
     return {
       settings: {
         ...defaults.settings,
@@ -129,9 +138,7 @@ function loadState() {
       customProducts: Array.isArray(saved.customProducts)
         ? saved.customProducts.map(normalizeProductName).filter(Boolean)
         : [],
-      slips: Array.isArray(saved.slips) && saved.slips.length
-        ? saved.slips.map(normalizeSlip)
-        : defaults.slips,
+      slips,
       productCatalog: [],
     };
   } catch {
@@ -144,13 +151,14 @@ function normalizeSlip(rawSlip = {}) {
   return {
     ...slip,
     ...rawSlip,
+    dcNumber: "",
     pendingAmount: rawSlip.pendingAmount || "",
     rows: Array.from({ length: DEFAULT_ROWS }, (_, index) => {
       const rawRow = rawSlip.rows?.[index] || {};
       return {
         ...slip.rows[index],
         ...rawRow,
-        product: rawRow.product || buildLegacyProduct(rawRow),
+        product: normalizeProductName(rawRow.product || buildLegacyProduct(rawRow)),
         bundle: rawRow.bundle || rawRow.bundi || "",
         amountMode: rawRow.amountMode || (rawRow.amount ? "manual" : "auto"),
       };
@@ -165,12 +173,12 @@ function buildLegacyProduct(row = {}) {
   return legacyParts.length ? normalizeProductName(legacyParts.join(" ")) : "";
 }
 
-function createSlip() {
+function createSlip(dcNumber = "") {
   return {
-    id: `slip-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    id: createSlipId(),
     customerName: "",
     date: "",
-    dcNumber: "",
+    dcNumber,
     gaddiNumber: "",
     pendingAmount: "",
     rows: Array.from({ length: DEFAULT_ROWS }, () => ({
@@ -185,9 +193,14 @@ function createSlip() {
   };
 }
 
+function createSlipId() {
+  return `slip-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
 function wireTopLevelEvents() {
   elements.addSlip.addEventListener("click", () => {
     state.slips.push(createSlip());
+    assignDcNumbers();
     commit();
   });
 
@@ -196,8 +209,9 @@ function wireTopLevelEvents() {
     const duplicate = lastSlip
       ? normalizeSlip(JSON.parse(JSON.stringify(lastSlip)))
       : createSlip();
-    duplicate.id = createSlip().id;
+    duplicate.id = createSlipId();
     state.slips.push(duplicate);
+    assignDcNumbers();
     commit();
   });
 
@@ -216,7 +230,7 @@ function wireTopLevelEvents() {
       return;
     }
 
-    state.slips = [createSlip()];
+    state.slips = [createSlip(formatDcNumber(1))];
     commit();
   });
 
@@ -383,7 +397,7 @@ function renderEditors() {
       title.textContent = slip.customerName || "Untitled bill";
     });
     bindMetaField(fragment, slip, "date");
-    bindMetaField(fragment, slip, "dcNumber");
+    fragment.querySelector('[data-field="dcNumber"]').value = slip.dcNumber || "";
     bindMetaField(fragment, slip, "gaddiNumber");
     bindMetaField(fragment, slip, "pendingAmount", () => {
       updateGrandTotalInput(slip, grandTotalInput);
@@ -415,8 +429,9 @@ function renderEditors() {
     removeButton.addEventListener("click", () => {
       state.slips = state.slips.filter((item) => item.id !== slip.id);
       if (!state.slips.length) {
-        state.slips.push(createSlip());
+        state.slips.push(createSlip(formatDcNumber(1)));
       }
+      assignDcNumbers();
       commit();
     });
 
@@ -554,7 +569,7 @@ function buildSlipPreview(slip) {
     </div>
     <div class="bill-meta-cell">
       <span class="bill-meta-label">DC NO. :-</span>
-      <span class="bill-meta-value">GD/001 ${escapeHtml(slip.dcNumber || " ")}</span>
+      <span class="bill-meta-value">${escapeHtml(slip.dcNumber || " ")}</span>
     </div>
   `;
 
@@ -595,9 +610,20 @@ function buildSlipPreview(slip) {
   footer.className = "bill-footer";
   footer.innerHTML = `
     <div class="bill-footer-cell">
-      <div><strong>PENDING AMOUNT</strong> ${escapeHtml(slip.pendingAmount || " ")}</div>
-      <div><strong>GT</strong> ${escapeHtml(getGrandTotalDisplay(slip) || " ")}</div>
-      <div><strong>GADDI NUMBER</strong> ${escapeHtml(slip.gaddiNumber || " ")}</div>
+      <div class="bill-summary-list">
+        <div class="bill-summary-row">
+          <span class="bill-summary-label">PENDING AMOUNT</span>
+          <span class="bill-summary-value">${escapeHtml(slip.pendingAmount || "-")}</span>
+        </div>
+        <div class="bill-summary-row total-row">
+          <span class="bill-summary-label">GRAND TOTAL</span>
+          <span class="bill-summary-value">${escapeHtml(getGrandTotalDisplay(slip) || "0")}</span>
+        </div>
+        <div class="bill-summary-row">
+          <span class="bill-summary-label">GADDI NUMBER</span>
+          <span class="bill-summary-value">${escapeHtml(slip.gaddiNumber || "-")}</span>
+        </div>
+      </div>
     </div>
     <div class="bill-footer-cell signature">${escapeHtml(state.settings.signatureLabel || " ")}</div>
   `;
@@ -718,6 +744,11 @@ function combineCategoryAndItem(category, item) {
     return item;
   }
 
+  const itemTokens = item.split(" ");
+  if (/^[A-Z]{1,3}$/.test(itemTokens[0] || "") && category.includes(itemTokens[0]) && itemTokens.length > 1) {
+    return normalizeProductName(`${category} ${itemTokens.slice(1).join(" ")}`);
+  }
+
   return normalizeProductName(`${category} ${item}`);
 }
 
@@ -734,11 +765,64 @@ function normalizeProductName(value) {
 
   normalized = normalized.replace(/\bTADPADTRI\b/g, "TADPATRI");
   normalized = normalized.replace(/\bBARLE TWIN SUTLI\b/g, "BALER TWINE SUTLI");
+  normalized = normalized.replace(/\b(T[BYWG])(?=\d)/g, "$1 ");
   normalized = normalized.replace(/^([A-Z]{2})(\d)/, "$1 $2");
-  normalized = normalized.replace(/^TB(?:\s+TADPATRI BLACK)?\b/, "TB TADPATRI BLACK");
-  normalized = normalized.replace(/^TY(?:\s+TADPATRI YELLOW)?\b/, "TY TADPATRI YELLOW");
+  normalized = normalized.replace(/^TB\b/, "TADPATRI BLACK");
+  normalized = normalized.replace(/^TY\b/, "TADPATRI YELLOW");
+  normalized = normalized.replace(/^TADPATRI\s+TB\b/, "TADPATRI BLACK");
+  normalized = normalized.replace(/^TADPATRI\s+TY\b/, "TADPATRI YELLOW");
+  normalized = normalized.replace(
+    /^(.+?)\s+([A-Z]{1,3})\s+([0-9].*)$/,
+    (match, prefix, code, tail) => (prefix.split(" ").includes(code) ? `${prefix} ${tail}` : match),
+  );
+  normalized = collapseRepeatedLeadingPhrase(normalized);
+  normalized = collapseAdjacentDuplicateTokens(normalized);
 
   return normalized;
+}
+
+function collapseRepeatedLeadingPhrase(value) {
+  let tokens = String(value).split(" ").filter(Boolean);
+  let changed = true;
+
+  while (changed) {
+    changed = false;
+    for (let size = Math.floor(tokens.length / 2); size >= 1; size -= 1) {
+      const firstPhrase = tokens.slice(0, size).join(" ");
+      const secondPhrase = tokens.slice(size, size * 2).join(" ");
+      if (firstPhrase && firstPhrase === secondPhrase) {
+        tokens = tokens.slice(size);
+        changed = true;
+        break;
+      }
+    }
+  }
+
+  return tokens.join(" ");
+}
+
+function collapseAdjacentDuplicateTokens(value) {
+  const tokens = String(value).split(" ").filter(Boolean);
+  const cleaned = [];
+
+  tokens.forEach((token) => {
+    if (cleaned[cleaned.length - 1] !== token) {
+      cleaned.push(token);
+    }
+  });
+
+  return cleaned.join(" ");
+}
+
+function formatDcNumber(sequence) {
+  const safeSequence = Number.isFinite(sequence) && sequence > 0 ? Math.floor(sequence) : 1;
+  return `${DC_PREFIX}${String(safeSequence).padStart(3, "0")}`;
+}
+
+function assignDcNumbers() {
+  state.slips.forEach((slip, index) => {
+    slip.dcNumber = formatDcNumber(index + 1);
+  });
 }
 
 function toNumber(value) {
