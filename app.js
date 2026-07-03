@@ -100,7 +100,7 @@ document.body.classList.add("preview-hidden");
 refreshProductCatalog();
 wireTopLevelEvents();
 render();
-loadProductsFromNoteFile();
+loadProductsFromSourceFile();
 
 function loadState() {
   const defaults = {
@@ -263,20 +263,20 @@ function refreshProductCatalog(noteProducts = []) {
   state.productCatalog = mergeProducts(noteProducts.length ? noteProducts : FALLBACK_PRODUCTS, state.customProducts);
 }
 
-async function loadProductsFromNoteFile() {
+async function loadProductsFromSourceFile() {
   try {
-    const response = await fetch("note.txt", { cache: "no-store" });
+    const response = await fetch("updated_names.txt", { cache: "no-store" });
     if (!response.ok) {
       return;
     }
 
-    const noteText = await response.text();
-    const noteProducts = parseProductList(noteText);
-    if (!noteProducts.length) {
+    const sourceText = await response.text();
+    const sourceProducts = parseProductList(sourceText);
+    if (!sourceProducts.length) {
       return;
     }
 
-    refreshProductCatalog(noteProducts);
+    refreshProductCatalog(sourceProducts);
     renderProductCatalog();
   } catch {
     // Opening index.html directly from disk may block fetch; fallback list stays usable.
@@ -286,7 +286,32 @@ async function loadProductsFromNoteFile() {
 function parseProductList(text) {
   return mergeProducts([], text
     .split(/\r?\n/)
-    .map((line) => normalizeProductName(line))
+    .map((line) => {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.toUpperCase() === "CATEGORY\tITEM NAME") {
+        return "";
+      }
+
+      const parts = trimmed.split(/\t+/).map((part) => part.trim()).filter(Boolean);
+      if (parts.length < 2) {
+        return normalizeProductName(trimmed);
+      }
+
+      const [category, ...itemParts] = parts;
+      const itemName = itemParts.join(" ");
+      if (!itemName) {
+        return normalizeProductName(category);
+      }
+
+      const normalizedCategory = normalizeProductName(category);
+      const normalizedItem = normalizeProductName(itemName);
+
+      if (normalizedItem.startsWith(`${normalizedCategory} `) || normalizedItem === normalizedCategory) {
+        return normalizedItem;
+      }
+
+      return normalizeProductName(`${normalizedCategory} ${normalizedItem}`);
+    })
     .filter(Boolean));
 }
 
@@ -667,6 +692,8 @@ function normalizeProductName(value) {
     .trim()
     .toUpperCase();
 
+  normalized = normalized.replace(/\bTADPADTRI\b/g, "TADPATRI");
+  normalized = normalized.replace(/\bBARLE TWIN SUTLI\b/g, "BALER TWINE SUTLI");
   normalized = normalized.replace(/^([A-Z]{2})(\d)/, "$1 $2");
   normalized = normalized.replace(/^TB(?:\s+TADPATRI BLACK)?\b/, "TB TADPATRI BLACK");
   normalized = normalized.replace(/^TY(?:\s+TADPATRI YELLOW)?\b/, "TY TADPATRI YELLOW");

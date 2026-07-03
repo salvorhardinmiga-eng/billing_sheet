@@ -18,4 +18,5 @@ Simple printable billing site for the shop.
 - Other products calculate `amount = pcs x rate`.
 - Amount can still be changed manually for any row, and `GT` is calculated automatically from the row amounts.
 - The `Product` column combines the old color, GSM, and size fields into one searchable name.
+- The live product library is loaded from `updated_names.txt`, so category-style names such as `KOREA 12x15` appear more clearly.
 - The preview can be shown or hidden while editing, and a single slip is centered on the print page.
