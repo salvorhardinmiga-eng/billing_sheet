@@ -217,9 +217,18 @@ function wireTopLevelEvents() {
 
   elements.printSheet.addEventListener("click", () => {
     window.print();
-    incrementInvoiceSequence(state.slips.length);
-    assignInvoiceNumbers();
-    commit();
+    window.setTimeout(() => {
+      const invoiceMade = window.confirm("Was the invoice PDF made?");
+      if (!invoiceMade) {
+        return;
+      }
+
+      incrementInvoiceSequence(state.slips.length);
+      state.slips = [createSlip()];
+      assignInvoiceNumbers();
+      commit();
+      window.location.reload();
+    }, 0);
   });
 
   elements.togglePreview.addEventListener("click", () => {
