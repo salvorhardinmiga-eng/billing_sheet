@@ -77,6 +77,8 @@ const FALLBACK_PRODUCTS = [
 
 let nextInvoiceSequence = loadInvoiceSequence();
 const state = loadState();
+let awaitingInvoiceConfirmation = false;
+let invoiceConfirmationQueued = false;
 
 const elements = {
   addSlip: document.querySelector("#add-slip"),
@@ -102,6 +104,7 @@ const elements = {
 document.body.classList.add("preview-hidden");
 refreshProductCatalog();
 wireTopLevelEvents();
+wirePrintCompletionEvents();
 render();
 loadProductsFromSourceFile();
 
@@ -216,19 +219,8 @@ function wireTopLevelEvents() {
   });
 
   elements.printSheet.addEventListener("click", () => {
+    awaitingInvoiceConfirmation = true;
     window.print();
-    window.setTimeout(() => {
-      const invoiceMade = window.confirm("Was the invoice PDF made?");
-      if (!invoiceMade) {
-        return;
-      }
-
-      incrementInvoiceSequence(state.slips.length);
-      state.slips = [createSlip()];
-      assignInvoiceNumbers();
-      commit();
-      window.location.reload();
-    }, 0);
   });
 
   elements.togglePreview.addEventListener("click", () => {
@@ -274,6 +266,60 @@ function wireTopLevelEvents() {
     state.settings.slipsPerPage = Number(event.target.value) || 4;
     commit({ fullRender: false });
   });
+}
+
+function wirePrintCompletionEvents() {
+  window.addEventListener("afterprint", queueInvoiceConfirmation);
+
+  if (!window.matchMedia) {
+    return;
+  }
+
+  const printMedia = window.matchMedia("print");
+  const onPrintMediaChange = (event) => {
+    if (!event.matches) {
+      queueInvoiceConfirmation();
+    }
+  };
+
+  if (typeof printMedia.addEventListener === "function") {
+    printMedia.addEventListener("change", onPrintMediaChange);
+    return;
+  }
+
+  if (typeof printMedia.addListener === "function") {
+    printMedia.addListener(onPrintMediaChange);
+  }
+}
+
+function queueInvoiceConfirmation() {
+  if (!awaitingInvoiceConfirmation || invoiceConfirmationQueued) {
+    return;
+  }
+
+  invoiceConfirmationQueued = true;
+  window.setTimeout(() => {
+    invoiceConfirmationQueued = false;
+    confirmInvoiceCreation();
+  }, 80);
+}
+
+function confirmInvoiceCreation() {
+  if (!awaitingInvoiceConfirmation) {
+    return;
+  }
+
+  awaitingInvoiceConfirmation = false;
+  const invoiceMade = window.confirm("Was the invoice PDF made?");
+  if (!invoiceMade) {
+    return;
+  }
+
+  incrementInvoiceSequence(state.slips.length);
+  state.slips = [createSlip()];
+  assignInvoiceNumbers();
+  commit();
+  window.location.reload();
 }
 
 function addProductFromManager() {
