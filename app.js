@@ -1,6 +1,7 @@
 const STORAGE_KEY = "billing-sheet-state-v5";
 const DEFAULT_ROWS = 7;
-const DC_PREFIX = "GD-";
+const INVOICE_COUNTER_KEY = "billing-sheet-invoice-counter-v1";
+const INVOICE_PREFIX = "GD-";
 const FALLBACK_PRODUCTS = [
   "TY TADPATRI YELLOW 170 GSM RAJ GOLD 12x15",
   "TY TADPATRI YELLOW 170 GSM RAJ GOLD 12x18",
@@ -74,6 +75,7 @@ const FALLBACK_PRODUCTS = [
   "LD 24X0.75",
 ];
 
+let nextInvoiceSequence = loadInvoiceSequence();
 const state = loadState();
 
 const elements = {
@@ -112,7 +114,7 @@ function loadState() {
       slipsPerPage: 4,
     },
     customProducts: [],
-    slips: [createSlip(formatDcNumber(1))],
+    slips: [createSlip()],
     productCatalog: [],
   };
 
@@ -126,9 +128,7 @@ function loadState() {
       ? saved.slips.map((slip) => normalizeSlip(slip))
       : defaults.slips;
 
-    slips.forEach((slip, index) => {
-      slip.dcNumber = formatDcNumber(index + 1);
-    });
+    assignInvoiceNumbers(slips, nextInvoiceSequence);
 
     return {
       settings: {
@@ -151,8 +151,8 @@ function normalizeSlip(rawSlip = {}) {
   return {
     ...slip,
     ...rawSlip,
-    dcNumber: "",
-    pendingAmount: rawSlip.pendingAmount || "",
+    invoiceNumber: "",
+    creditPending: rawSlip.creditPending || rawSlip.pendingAmount || "",
     rows: Array.from({ length: DEFAULT_ROWS }, (_, index) => {
       const rawRow = rawSlip.rows?.[index] || {};
       return {
@@ -173,14 +173,14 @@ function buildLegacyProduct(row = {}) {
   return legacyParts.length ? normalizeProductName(legacyParts.join(" ")) : "";
 }
 
-function createSlip(dcNumber = "") {
+function createSlip(invoiceNumber = "") {
   return {
     id: createSlipId(),
     customerName: "",
     date: "",
-    dcNumber,
+    invoiceNumber,
     gaddiNumber: "",
-    pendingAmount: "",
+    creditPending: "",
     rows: Array.from({ length: DEFAULT_ROWS }, () => ({
       product: "",
       bundle: "",
@@ -200,7 +200,7 @@ function createSlipId() {
 function wireTopLevelEvents() {
   elements.addSlip.addEventListener("click", () => {
     state.slips.push(createSlip());
-    assignDcNumbers();
+    assignInvoiceNumbers();
     commit();
   });
 
@@ -211,12 +211,15 @@ function wireTopLevelEvents() {
       : createSlip();
     duplicate.id = createSlipId();
     state.slips.push(duplicate);
-    assignDcNumbers();
+    assignInvoiceNumbers();
     commit();
   });
 
   elements.printSheet.addEventListener("click", () => {
     window.print();
+    incrementInvoiceSequence(state.slips.length);
+    assignInvoiceNumbers();
+    commit();
   });
 
   elements.togglePreview.addEventListener("click", () => {
@@ -230,7 +233,8 @@ function wireTopLevelEvents() {
       return;
     }
 
-    state.slips = [createSlip(formatDcNumber(1))];
+    state.slips = [createSlip()];
+    assignInvoiceNumbers();
     commit();
   });
 
@@ -273,6 +277,21 @@ function addProductFromManager() {
   elements.newProductName.value = "";
   commit({ fullRender: false, refreshProducts: true });
   elements.newProductName.focus();
+}
+
+function loadInvoiceSequence() {
+  const savedValue = Number.parseInt(localStorage.getItem(INVOICE_COUNTER_KEY) || "1", 10);
+  return Number.isFinite(savedValue) && savedValue > 0 ? savedValue : 1;
+}
+
+function persistInvoiceSequence() {
+  localStorage.setItem(INVOICE_COUNTER_KEY, String(nextInvoiceSequence));
+}
+
+function incrementInvoiceSequence(count = 1) {
+  const safeCount = Number.isFinite(count) && count > 0 ? Math.floor(count) : 1;
+  nextInvoiceSequence += safeCount;
+  persistInvoiceSequence();
 }
 
 function refreshProductCatalog(noteProducts = []) {
@@ -387,7 +406,8 @@ function renderEditors() {
     const title = fragment.querySelector("h3");
     const removeButton = fragment.querySelector(".remove-button");
     const rowContainer = fragment.querySelector(".editor-rows");
-    const pendingAmountInput = fragment.querySelector('[data-field="pendingAmount"]');
+    const currentTotalInput = fragment.querySelector("[data-current-total]");
+    const creditPendingInput = fragment.querySelector('[data-field="creditPending"]');
     const grandTotalInput = fragment.querySelector("[data-grand-total]");
 
     fragment.querySelector(".slip-index").textContent = `Sheet ${slipIndex + 1}`;
@@ -397,10 +417,10 @@ function renderEditors() {
       title.textContent = slip.customerName || "Untitled bill";
     });
     bindMetaField(fragment, slip, "date");
-    fragment.querySelector('[data-field="dcNumber"]').value = slip.dcNumber || "";
+    fragment.querySelector('[data-field="invoiceNumber"]').value = slip.invoiceNumber || "";
     bindMetaField(fragment, slip, "gaddiNumber");
-    bindMetaField(fragment, slip, "pendingAmount", () => {
-      updateGrandTotalInput(slip, grandTotalInput);
+    bindMetaField(fragment, slip, "creditPending", () => {
+      updateTotalInputs(slip, currentTotalInput, grandTotalInput);
     });
 
     slip.rows.forEach((row, rowIndex) => {
@@ -412,10 +432,10 @@ function renderEditors() {
       Object.entries(inputs).forEach(([field, input]) => {
         input.value = row[field] || "";
         input.addEventListener("input", (event) => {
-          handleRowInput(row, field, event.target.value, inputs, grandTotalInput, slip);
+          handleRowInput(row, field, event.target.value, inputs, currentTotalInput, grandTotalInput, slip);
         });
         input.addEventListener("change", (event) => {
-          handleRowChange(row, field, event.target.value, inputs, grandTotalInput, slip);
+          handleRowChange(row, field, event.target.value, inputs, currentTotalInput, grandTotalInput, slip);
         });
       });
 
@@ -423,15 +443,15 @@ function renderEditors() {
       rowContainer.appendChild(rowFragment);
     });
 
-    pendingAmountInput.value = slip.pendingAmount || "";
-    updateGrandTotalInput(slip, grandTotalInput);
+    creditPendingInput.value = slip.creditPending || "";
+    updateTotalInputs(slip, currentTotalInput, grandTotalInput);
 
     removeButton.addEventListener("click", () => {
       state.slips = state.slips.filter((item) => item.id !== slip.id);
       if (!state.slips.length) {
-        state.slips.push(createSlip(formatDcNumber(1)));
+        state.slips.push(createSlip());
       }
-      assignDcNumbers();
+      assignInvoiceNumbers();
       commit();
     });
 
@@ -447,7 +467,7 @@ function getRowInputs(rowElement) {
   return inputs;
 }
 
-function handleRowInput(row, field, value, inputs, grandTotalInput, slip) {
+function handleRowInput(row, field, value, inputs, currentTotalInput, grandTotalInput, slip) {
   row[field] = value;
 
   if (field === "amount") {
@@ -460,11 +480,11 @@ function handleRowInput(row, field, value, inputs, grandTotalInput, slip) {
     syncRowCalculation(row, inputs);
   }
 
-  updateGrandTotalInput(slip, grandTotalInput);
+  updateTotalInputs(slip, currentTotalInput, grandTotalInput);
   commit({ fullRender: false });
 }
 
-function handleRowChange(row, field, value, inputs, grandTotalInput, slip) {
+function handleRowChange(row, field, value, inputs, currentTotalInput, grandTotalInput, slip) {
   row[field] = field === "product" ? normalizeProductName(value) : value;
   inputs[field].value = row[field];
 
@@ -473,7 +493,7 @@ function handleRowChange(row, field, value, inputs, grandTotalInput, slip) {
   }
 
   syncRowCalculation(row, inputs);
-  updateGrandTotalInput(slip, grandTotalInput);
+  updateTotalInputs(slip, currentTotalInput, grandTotalInput);
   commit({ fullRender: false });
 }
 
@@ -568,8 +588,8 @@ function buildSlipPreview(slip) {
       <span class="bill-meta-value">${escapeHtml(slip.customerName || " ")}</span>
     </div>
     <div class="bill-meta-cell">
-      <span class="bill-meta-label">DC NO. :-</span>
-      <span class="bill-meta-value">${escapeHtml(slip.dcNumber || " ")}</span>
+      <span class="bill-meta-label">INVOICE NO. :-</span>
+      <span class="bill-meta-value">${escapeHtml(slip.invoiceNumber || " ")}</span>
     </div>
   `;
 
@@ -612,8 +632,12 @@ function buildSlipPreview(slip) {
     <div class="bill-footer-cell">
       <div class="bill-summary-list">
         <div class="bill-summary-row">
-          <span class="bill-summary-label">PENDING AMOUNT</span>
-          <span class="bill-summary-value">${escapeHtml(slip.pendingAmount || "-")}</span>
+          <span class="bill-summary-label">CURRENT TOTAL</span>
+          <span class="bill-summary-value">${escapeHtml(getCurrentTotalDisplay(slip) || "-")}</span>
+        </div>
+        <div class="bill-summary-row">
+          <span class="bill-summary-label">CREDIT PENDING</span>
+          <span class="bill-summary-value">${escapeHtml(getCreditPendingDisplay(slip) || "-")}</span>
         </div>
         <div class="bill-summary-row total-row">
           <span class="bill-summary-label">GRAND TOTAL</span>
@@ -632,22 +656,54 @@ function buildSlipPreview(slip) {
   return article;
 }
 
-function updateGrandTotalInput(slip, input) {
-  input.value = getGrandTotalDisplay(slip);
+function updateTotalInputs(slip, currentTotalInput, grandTotalInput) {
+  currentTotalInput.value = getCurrentTotalDisplay(slip);
+  grandTotalInput.value = getGrandTotalDisplay(slip);
 }
 
-function getGrandTotalDisplay(slip) {
+function getCurrentTotalValue(slip) {
   const rowTotal = slip.rows.reduce((sum, row) => {
     const amount = toNumber(getRowAmountDisplay(row));
     return Number.isFinite(amount) ? sum + amount : sum;
   }, 0);
-  const pendingAmount = toNumber(slip.pendingAmount);
-  const total = rowTotal + (Number.isFinite(pendingAmount) ? pendingAmount : 0);
-  const hasPendingAmount = String(slip.pendingAmount || "").trim() !== "";
+
+  return rowTotal;
+}
+
+function getCurrentTotalDisplay(slip) {
+  const total = getCurrentTotalValue(slip);
+  const hasAnyAmount = slip.rows.some((row) => getRowAmountDisplay(row));
 
   if (!Number.isFinite(total) || total === 0) {
-    const hasAnyAmount = slip.rows.some((row) => getRowAmountDisplay(row)) || hasPendingAmount;
     return hasAnyAmount ? "0" : "";
+  }
+
+  return formatDisplayNumber(total);
+}
+
+function getCreditPendingValue(slip) {
+  const creditPending = toNumber(slip.creditPending);
+  return Number.isFinite(creditPending) ? creditPending : 0;
+}
+
+function getCreditPendingDisplay(slip) {
+  const parsedValue = toNumber(slip.creditPending);
+  if (Number.isFinite(parsedValue)) {
+    return formatDisplayNumber(parsedValue);
+  }
+
+  return String(slip.creditPending || "").trim();
+}
+
+function getGrandTotalDisplay(slip) {
+  const currentTotal = getCurrentTotalValue(slip);
+  const creditPending = getCreditPendingValue(slip);
+  const total = currentTotal + creditPending;
+  const hasCurrentTotal = slip.rows.some((row) => getRowAmountDisplay(row));
+  const hasCreditPending = String(slip.creditPending || "").trim() !== "";
+
+  if (!Number.isFinite(total) || total === 0) {
+    return hasCurrentTotal || hasCreditPending ? "0" : "";
   }
 
   return formatDisplayNumber(total);
@@ -814,14 +870,14 @@ function collapseAdjacentDuplicateTokens(value) {
   return cleaned.join(" ");
 }
 
-function formatDcNumber(sequence) {
+function formatInvoiceNumber(sequence) {
   const safeSequence = Number.isFinite(sequence) && sequence > 0 ? Math.floor(sequence) : 1;
-  return `${DC_PREFIX}${String(safeSequence).padStart(3, "0")}`;
+  return `${INVOICE_PREFIX}${String(safeSequence).padStart(3, "0")}`;
 }
 
-function assignDcNumbers() {
-  state.slips.forEach((slip, index) => {
-    slip.dcNumber = formatDcNumber(index + 1);
+function assignInvoiceNumbers(targetSlips = state.slips, startSequence = nextInvoiceSequence) {
+  targetSlips.forEach((slip, index) => {
+    slip.invoiceNumber = formatInvoiceNumber(startSequence + index);
   });
 }
 

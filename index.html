@@ -59,7 +59,7 @@
         </div>
 
         <p class="help-copy">
-          DC number is automatic from GD-001. Amount is auto-calculated by product type but can still be changed manually, and pending amount is added into the grand total automatically.
+          Invoice number uses a separate running counter and moves forward after each Print / Save PDF. Amount is auto-calculated by product type but can still be changed manually, and credit pending is added into the grand total automatically.
         </p>
 
         <section class="product-library">
@@ -121,8 +121,8 @@
           <input data-field="date" type="text">
         </label>
         <label>
-            <span>DC number</span>
-            <input data-field="dcNumber" type="text" readonly>
+            <span>Invoice number</span>
+            <input data-field="invoiceNumber" type="text" readonly>
         </label>
         <label>
           <span>Gaddi number</span>
@@ -150,8 +150,12 @@
 
       <div class="total-strip">
         <label class="total-input-wrap">
-          <span>Pending amount</span>
-          <input data-field="pendingAmount" type="text" inputmode="decimal">
+          <span>Current total</span>
+          <input data-current-total type="text" inputmode="decimal" readonly>
+        </label>
+        <label class="total-input-wrap">
+          <span>Credit pending</span>
+          <input data-field="creditPending" type="text" inputmode="decimal">
         </label>
         <label class="total-input-wrap">
           <span>Grand total</span>
